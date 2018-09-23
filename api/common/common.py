@@ -21,3 +21,10 @@ def get_twiiter_credentials():
     access_secret = parser.get('twitter', 'access_secret')
 
     return consumer_key, consumer_secret, access_key, access_secret
+
+
+def get_postgres_connection_str():
+    parser.read(connections_cfg_path)
+    connection_str = parser.get('postgres_db', 'connection_str')
+
+    return connection_str

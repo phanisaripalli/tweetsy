@@ -1,16 +1,14 @@
 from flask_restful import Resource
 from flask_restful import request
-from api.db.db import DB
+from api.t_api.api import API
 
 class Tweets(Resource):
     def __init__(self, **kwargs):
-        self.client = kwargs['client']
         self.twitter_api = kwargs['twitter_api']
 
     def get(self):
 
-
-        db = DB(self.twitter_api, self.client)
+        api = API(self.twitter_api)
 
         params = {
             'q': request.args.get('keyword'),
@@ -19,7 +17,7 @@ class Tweets(Resource):
             'max_id': request.args.get('max_id')
         }
 
-        tweets = db.get_tweets(params)
+        tweets = api.get_tweets(params)
 
         json_results = [tweet.AsDict() for tweet in tweets]
         max_id = None

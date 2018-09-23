@@ -3,3 +3,5 @@ __pycache__/
 
 *.cfg
 *.idea*
+api/wsgi.py
+health_monitor.py

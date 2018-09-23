@@ -14,6 +14,12 @@ def get_mongo_connection_str():
     return connection_str
 
 
+def get_postgres_connection_str():
+    parser.read(connections_cfg_path)
+    connection_str = parser.get('postgres_db', 'connection_str')
+
+    return connection_str
+
 def get_twiiter_credentials():
     parser.read(connections_cfg_path)
 

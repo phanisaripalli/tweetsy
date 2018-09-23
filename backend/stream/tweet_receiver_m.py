@@ -1,8 +1,7 @@
 from daemon import Daemon
 import os, sys
 import json
-import psycopg2
-from psycopg2.extras import execute_values
+import pymongo
 from confluent_kafka import Consumer, KafkaError
 import threading
 
@@ -16,7 +15,8 @@ class TweetReceiver(Daemon):
 
     TOPIC = 'tweet'
     SERVER = common.get_kafka_server()
-    PG_CNCTN_STR = common.get_postgres_connection_str()
+    MONGO_CNTN_STR = common.get_mongo_connection_str()
+
     stream = None
 
     def __init__(self, pid_file):
@@ -28,7 +28,6 @@ class TweetReceiver(Daemon):
         self.setup_consumer()
         self.__delete_old_tweets()
         self.consume()
-
 
     @staticmethod
     def acknowledge(consumer, partitions):
@@ -46,21 +45,8 @@ class TweetReceiver(Daemon):
         })
 
     def __delete_old_tweets(self):
-        threading.Timer(900.0, self.__delete_old_tweets).start()
-        #cur = self.pg_connection.cursor()
-        sql = """DELETE FROM twitter.tweets 
-                WHERE (tweet->>'tweet_timestamp')::timestamp <= current_timestamp - (15 * interval '1 minute')
-            """
-        conn = psycopg2.connect(TweetReceiver.PG_CNCTN_STR)
-        cur = conn.cursor()
-        cur.execute(sql)
-
-        sql = """DELETE FROM twitter.hashtags 
-                        WHERE tweet_timestamp <= current_timestamp - (15 * interval '1 minute')
-                    """
-        cur.execute(sql)
-        conn.commit()
-        cur.close()
+        threading.Timer(600.0, self.__delete_old_tweets).start()  # called every minute
+        print(111)
 
 
     def consume(self):
@@ -74,9 +60,9 @@ class TweetReceiver(Daemon):
             if msg.error():
                 # Error or event
                 if msg.error().code() == KafkaError._PARTITION_EOF:
-                    pass
                     # End of partition event
-                    # sys.stderr.write('%% %s [%d] reached end at offset %d\n' % (msg.topic(), msg.partition(), msg.offset()))
+                    sys.stderr.write('%% %s [%d] reached end at offset %d\n' %
+                                     (msg.topic(), msg.partition(), msg.offset()))
                 else:
                     pass
                     # Error
@@ -89,42 +75,35 @@ class TweetReceiver(Daemon):
     def __insert_tweet(self, body):
         try:
             tweet = json.loads(body)
-            conn = psycopg2.connect(TweetReceiver.PG_CNCTN_STR)
-            cur = conn.cursor()
-            sql = "INSERT INTO twitter.tweets VALUES (%s)"
-            data = json.dumps(tweet, ensure_ascii=False)
-            cur.execute(sql, (data,))
+            client = pymongo.MongoClient(TweetReceiver.MONGO_CNTN_STR)
+            db = client.get_database('twitter')
+
+            db.tweets.insert(tweet)
+
             hashtags = tweet['hashtags']
 
             if len(hashtags) > 0:
-                self.__insert_hashtags(tweet['id'], tweet['tweet_timestamp'], hashtags, cur)
+                self.__insert_hashtags(tweet['id'], tweet['created_at'], hashtags, db)
 
-            conn.commit()
-            cur.close()
-            conn.close()
-
+            client.close()
 
         except Exception as e:
             print(str(e))
-            print('err')
+            if client:
+                client.close()
 
 
-    def __insert_hashtags(self, tweet_id, tweet_timestamp, hashtags_b, cur):
+    def __insert_hashtags(self, tweet_id, created_at, hashtags_b, db):
         hashtags = []
         try:
             for hashtag_b in hashtags_b:
-                hashtags.append((
-                    tweet_id,
-                    tweet_timestamp,
-                    hashtag_b['text']
-                ))
+                hashtags.append({
+                    'tweet_id': tweet_id,
+                    'created_at': created_at,
+                    'hashtag': hashtag_b['text']
+                })
 
-
-            sql = "INSERT INTO twitter.hashtags VALUES %s"
-
-            execute_values(cur, sql, hashtags)
-
-
+            db.hashtags.insert_many(hashtags)
         except Exception as e:
             print(str(e))
 
