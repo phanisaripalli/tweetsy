@@ -55,10 +55,11 @@ class Distribution(Resource):
             ) sq 
             """
 
-            response = {'avg_tweets': None}
+            response = {'avg_tweets': None, 'has_result': False}
             row = db.get_row(sql)
 
             if row:
                 response['avg_tweets'] = row[0]
+                response['has_result'] = True
 
             return response

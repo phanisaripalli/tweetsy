@@ -22,7 +22,7 @@ class Overview(Resource):
             LIMIT 1
         """
 
-        response = {}
+        response = {'has_result': False}
 
         try:
 
@@ -30,14 +30,18 @@ class Overview(Resource):
 
             row = db.get_row(sql)
 
-            response['result'] = 'success'
-            response['search_key'] = row[0]
-            response['total_tweets'] = row[1]
-            response['distinct_users'] = row[2]
-            response['min_timestamp'] = row[3]
+            if row:
 
-        except:
-            response = {'result': 'error'}
+                response['result'] = 'success'
+                response['search_key'] = row[0]
+                response['total_tweets'] = row[1]
+                response['distinct_users'] = row[2]
+                response['min_timestamp'] = row[3]
+                response['has_result'] = True
+
+        except Exception as e:
+            print(str(e))
+            response = {'result': 'error', 'has_result': False}
 
 
         return response

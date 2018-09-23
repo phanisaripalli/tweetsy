@@ -23,23 +23,32 @@ class DB():
 
 
     def get_row(self, sql):
-        cur = self.connection.cursor()
-        cur.execute(sql)
-        row = cur.fetchone()
 
-        self.connection.commit()
-        cur.close()
+        row = []
+        try:
+            cur = self.connection.cursor()
+            cur.execute(sql)
+            row = cur.fetchone()
+
+            self.connection.commit()
+            cur.close()
+        except Exception as e:
+            print("Pg Error: " + str(e))
 
         return row
 
     def get_rows(self, sql):
-        cur = self.connection.cursor()
-        cur.execute(sql)
-        rows = cur.fetchall()
+        rows = []
+        try:
+            cur = self.connection.cursor()
+            cur.execute(sql)
+            rows = cur.fetchall()
 
 
-        self.connection.commit()
-        cur.close()
+            self.connection.commit()
+            cur.close()
+        except Exception as e:
+            print("Pg Error: " + str(e))
 
         return rows
 

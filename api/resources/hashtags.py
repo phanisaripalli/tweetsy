@@ -15,7 +15,7 @@ class Hashtags(Resource):
             LIMIT 10
         """
 
-        response = {}
+        response = {'has_result': False}
 
         try:
             db = DB(self.connection)
@@ -30,8 +30,9 @@ class Hashtags(Resource):
 
             response['hashtags'] = hashtags
             response['count'] = len(hashtags)
+            response['has_result'] = False
         except:
-            response = {'result': "error"}
+            response = {'result': "error", 'has_result': False}
 
         return response
 
